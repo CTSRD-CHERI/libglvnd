@@ -32,6 +32,10 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include <cheri/cheric.h>
+#endif
+
 #if defined(ENABLE_EGL_X11)
 #include <X11/Xlib.h>
 #endif
@@ -145,7 +149,12 @@ static EGLBoolean _eglPointerIsDereferencable(void *p)
      * depending on what system we're building on. Since we don't actually need
      * that result, just cast it to a void* so that it works either way.
      */
+#ifdef __CHERI_PURE_CAPABILITY__
+    return (mincore((void *) p, cheri_getlength(p), (void *) &unused) >= 0);
+#else
     return (mincore((void *) addr, page_size, (void *) &unused) >= 0);
+#endif
+
 #else
     return EGL_FALSE;
 #endif
