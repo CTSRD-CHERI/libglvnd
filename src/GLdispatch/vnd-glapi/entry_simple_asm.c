@@ -53,5 +53,13 @@
 
 mapi_func entry_get_public(int index)
 {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    const ptraddr_t sentry_addr = __builtin_cheri_address_get(public_entry_start);
+    const ptraddr_t stub_addr = sentry_addr + (index * entry_stub_size);
+    const void* pcc = __builtin_cheri_program_counter_get();
+    uintptr_t result_cap = (uintptr_t) __builtin_cheri_address_set(pcc, stub_addr);
+    return (mapi_func) __builtin_cheri_seal_entry(result_cap | 1);
+#else   // !__CHERI_ PURE_CAPABILITY__
     return (mapi_func)(public_entry_start + (index * entry_stub_size));
+#endif  // !__CHERI_PURE_CAPABILITY__
 }
