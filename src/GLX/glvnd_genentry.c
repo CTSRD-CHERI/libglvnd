@@ -96,11 +96,19 @@ extern char glx_entrypoint_end[];
 #elif defined(USE_AARCH64_ASM)
 
 #define STUB_SIZE 16
+#if defined(__CHERI_PURE_CAPABILITY__)
+#define STUB_ASM_ARCH(slot) \
+    "adrp c16, entrypointFunctions + " slot "*16\n" \
+    "ldr c16, [c16, #:lo12:(entrypointFunctions + " slot "*16)]\n" \
+    "br c16\n" \
+    "nop\n"
+#else   // !__CHERI_PURE_CAPABILITY__
 #define STUB_ASM_ARCH(slot) \
     "hint #34\n" \
     "adrp x16, entrypointFunctions + " slot "*8\n" \
     "ldr x16, [x16, #:lo12:(entrypointFunctions + " slot "*8)]\n" \
     "br x16\n"
+#endif  // !__CHERI_PURE_CAPABILITY__
 
 #elif defined(USE_PPC64_ASM) && defined(_CALL_ELF) && (_CALL_ELF == 2)
 
@@ -166,7 +174,15 @@ static void *DefaultDispatchFunc(void)
 
 static GLVNDentrypointStub GetEntrypointStub(int index)
 {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    const ptraddr_t sentry_addr = __builtin_cheri_address_get(glx_entrypoint_start);
+    const ptraddr_t stub_addr = sentry_addr + (index * STUB_SIZE);
+    const void* pcc = __builtin_cheri_program_counter_get();
+    uintptr_t result_cap = (uintptr_t) __builtin_cheri_address_set(pcc, stub_addr);
+    return (GLVNDentrypointStub) __builtin_cheri_seal_entry(result_cap | 1);
+#else   // !__CHERI_PURE_CAPABILITY__
     return (GLVNDentrypointStub) (glx_entrypoint_start + (index * STUB_SIZE));
+#endif  // !__CHERI_PURE_CAPABILITY__
 }
 
 GLVNDentrypointStub glvndGenerateEntrypoint(const char *procName)

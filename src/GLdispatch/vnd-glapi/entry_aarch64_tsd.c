@@ -68,6 +68,35 @@
  * The 'found_dispatch' section computes the correct offset in the dispatch
  * table then does a branch without link to the function address.
  */
+#if defined(__CHERI_PURE_CAPABILITY__)
+#define STUB_ASM_CODE(slot)                           \
+    "stp c1, c0, [csp, #-32]!\n\t"                    \
+    "adrp c0, :got:_glapi_Current\n\t"                \
+    "ldr c0, [c0, #:got_lo12:_glapi_Current]\n\t"     \
+    "ldr c0, [c0]\n\t"                                \
+    "gcvalue x0, c0\n\t"                              \
+    "cbz x0, 10f\n\t"                                 \
+    "11:\n\t"        /* found dispatch */             \
+    "ldr x1, 3f\n\t"                                  \
+    "ldr c16, [c0, x1]\n\t"                           \
+    "ldp c1, c0, [csp], #32\n\t"                      \
+    "br c16\n\t"                                      \
+    "10:\n\t"        /* lookup dispatch */            \
+    "stp c30, c9, [csp, #-32]!\n\t"                   \
+    "stp c7, c6, [csp, #-32]!\n\t"                    \
+    "stp c5, c4, [csp, #-32]!\n\t"                    \
+    "stp c3, c2, [csp, #-32]!\n\t"                    \
+    "adrp c0, :got:_glapi_get_current\n\t"            \
+    "ldr c0, [c0, #:got_lo12:_glapi_get_current]\n\t" \
+    "blr c0\n\t"                                      \
+    "ldp c3, c2, [csp], #32\n\t"                      \
+    "ldp c5, c4, [csp], #32\n\t"                      \
+    "ldp c7, c6, [csp], #32\n\t"                      \
+    "ldp c30, c9, [csp], #32\n\t"                     \
+    "b 11b\n\t"                                       \
+    "3:\n\t"                                          \
+    ".xword " slot " * 16\n\t" /* size of (void *) */
+#else   // !__CHERI_PURE_CAPABILITY__
 #define STUB_ASM_CODE(slot)                           \
     "hint #34\n\t"                                    \
     "stp x1, x0, [sp, #-16]!\n\t"                     \
@@ -95,6 +124,7 @@
     "b 11b\n\t"                                       \
     "3:\n\t"                                          \
     ".xword " slot " * 8\n\t" /* size of (void *) */
+#endif  // !__CHERI_PURE_CAPABILITY__
 
 __asm__(".section wtext,\"ax\"\n"
         ".balign " U_STRINGIFY(GLDISPATCH_PAGE_SIZE) "\n"

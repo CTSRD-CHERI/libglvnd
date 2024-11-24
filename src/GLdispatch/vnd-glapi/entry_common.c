@@ -80,7 +80,15 @@ int entry_patch_finish(void)
 
 void *entry_get_patch_address(int index)
 {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    const ptraddr_t sentry_addr = __builtin_cheri_address_get(public_entry_start);
+    const ptraddr_t stub_addr = sentry_addr + (index * entry_stub_size);
+    const void* pcc = __builtin_cheri_program_counter_get();
+    uintptr_t result_cap = (uintptr_t) __builtin_cheri_address_set(pcc, stub_addr);
+    return (void *) __builtin_cheri_seal_entry(result_cap | 1);
+#else   // !__CHERI_PURE_CAPABILITY__
     return (void *) (public_entry_start + (index * entry_stub_size));
+#endif  // !__CHERI_PURE_CAPABILITY__
 }
 
 void *entry_save_entrypoints(void)
@@ -88,7 +96,14 @@ void *entry_save_entrypoints(void)
     size_t size = ((uintptr_t) public_entry_end) - ((uintptr_t) public_entry_start);
     void *buf = malloc(size);
     if (buf != NULL) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+        const ptraddr_t sentry_addr = __builtin_cheri_address_get(public_entry_start);
+        const void* pcc = __builtin_cheri_program_counter_get();
+        uintptr_t src_cap = (uintptr_t) __builtin_cheri_address_set(pcc, sentry_addr);
+        memcpy(buf, src_cap, size);
+#else   // !__CHERI_PURE_CAPABILITY__
         memcpy(buf, public_entry_start, size);
+#endif  // !__CHERI_PURE_CAPABILITY__
     }
     return buf;
 }
@@ -139,7 +154,14 @@ static void InvalidateCache(void)
 void entry_restore_entrypoints(void *saved)
 {
     size_t size = ((uintptr_t) public_entry_end) - ((uintptr_t) public_entry_start);
+#if defined(__CHERI_PURE_CAPABILITY__)
+    const ptraddr_t sentry_addr = __builtin_cheri_address_get(public_entry_start);
+    const void* pcc = __builtin_cheri_program_counter_get();
+    uintptr_t dst_cap = (uintptr_t) __builtin_cheri_address_set(pcc, sentry_addr);
+    memcpy(dst_cap, saved, size);
+#else   // !__CHERI_PURE_CAPABILITY__
     memcpy(public_entry_start, saved, size);
+#endif  // !__CHERI_PURE_CAPABILITY__
     InvalidateCache();
 }
 
