@@ -95,19 +95,14 @@ extern char glx_entrypoint_end[];
 
 #elif defined(USE_AARCH64_ASM)
 
+#define STUB_SIZE 16
 #if defined(__CHERI_PURE_CAPABILITY__)
-#define STUB_SIZE 32
 #define STUB_ASM_ARCH(slot) \
     "adrp c16, entrypointFunctions + " slot "*16\n" \
-    "str c17, [csp, #-16]\n" \
-    "adrp c17, 0\n" \
-    "scvalue c17, c17, x16\n" \
-    "ldr c16, [c17, #:lo12:(entrypointFunctions + " slot "*16)]\n" \
-    "ldr c17, [csp], #16\n" \
+    "ldr c16, [c16, #:lo12:(entrypointFunctions + " slot "*16)]\n" \
     "br c16\n" \
     "nop\n"
 #else   // !__CHERI_PURE_CAPABILITY__
-#define STUB_SIZE 16
 #define STUB_ASM_ARCH(slot) \
     "hint #34\n" \
     "adrp x16, entrypointFunctions + " slot "*8\n" \

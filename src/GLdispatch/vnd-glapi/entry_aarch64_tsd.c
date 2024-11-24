@@ -74,8 +74,8 @@
     "adrp c0, :got:_glapi_Current\n\t"                \
     "ldr c0, [c0, #:got_lo12:_glapi_Current]\n\t"     \
     "ldr c0, [c0]\n\t"                                \
-    "gcvalue x1, c0\n\t"                              \
-    "cbz x1, 10f\n\t"                                 \
+    "gcvalue x0, c0\n\t"                              \
+    "cbz x0, 10f\n\t"                                 \
     "11:\n\t"        /* found dispatch */             \
     "ldr x1, 3f\n\t"                                  \
     "ldr c16, [c0, x1]\n\t"                           \
